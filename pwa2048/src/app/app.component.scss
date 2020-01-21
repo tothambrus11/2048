@@ -1,0 +1,15 @@
+#flex-container{
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+}
+
+
+#page-title{
+  font-family: var(--base-font);
+  font-size: max(10vh, 3em);
+  color: var(--accent-color)
+}
