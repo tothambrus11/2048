@@ -13,7 +13,7 @@ export class GameControls {
   mouseGestures: MouseGestures;
 
   public controlEvent$: Observable<GameControlEvent>;
-  private observer: Subscriber<GameControlEvent>;
+  public observer: Subscriber<GameControlEvent>;
 
   constructor(private p: p5, private mouseEvent$: Observable<MyMouseEvent>, private keyboardEvent$: Observable<KeyboardEvent>) {
     this.mouseGestures = new MouseGestures(p, mouseEvent$);
