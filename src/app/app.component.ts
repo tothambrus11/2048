@@ -1,4 +1,4 @@
-import {Component, HostListener} from '@angular/core';
+import {Component, ElementRef, HostListener, ViewChild} from '@angular/core';
 
 @Component({
   selector: 'app-root',
@@ -9,11 +9,16 @@ export class AppComponent {
   title = 'pwa2048';
   windowSize: { width: number, height: number };
 
+  constructor(private container: ElementRef) {
+  }
+
   ngOnInit() {
     this.windowSize = {
       width: window.innerWidth,
       height: window.innerHeight
     };
+    this.container.nativeElement.addEventListener("touchstart", (e)=>e.preventDefault());
+    this.container.nativeElement.addEventListener("touchmove", (e)=>e.preventDefault());
   }
 
   @HostListener('window:resize', ['$event'])
@@ -25,10 +30,10 @@ export class AppComponent {
   }
 
   getCanvasSize(): Size {
-    let size = Math.min(
+    let size = Math.min(Math.min(
       Math.min(Math.max(this.windowSize.height * 0.7, 400), this.windowSize.height),
       Math.min(Math.max(this.windowSize.width * 0.7, 400), this.windowSize.width)
-    );
+    ), this.windowSize.height * 0.69);
 
     return {
       width: size,

@@ -1,4 +1,25 @@
-<div id="flex-container">
+<div id="flex-container" class="noselect" #container>
   <h1 id="page-title">2048</h1>
-  <game [width]="getCanvasSize().width" [height]="getCanvasSize().height" gridSize="4" [accentColor]="[0,255,255]" [backgroundColor]="[221, 243, 255]"></game>
+  <game #game [width]="getCanvasSize().width" [height]="getCanvasSize().height" gridSize="4" [accentColor]="[0,255,255]"
+        [backgroundColor]="[221, 243, 255]"></game>
+  <div id="controls-container" [ngStyle]="{width: getCanvasSize().width + 'px'}">
+    <button
+      class="icon-button"
+      style="background-image:url('assets/icons/back-icon.svg');"
+      matRipple
+      matRippleRadius="30"
+      matRippleCentered="true"></button>
+    <div id="score-container" style="flex-grow: 1">
+      <h2 style="display: inline-block">982 points</h2>
+      <p>Best: {{game.service.bestScore}}</p>
+    </div>
+    <button
+      class="icon-button"
+      style="background-image:url('assets/icons/new-game-icon.svg');"
+      matRipple
+      (click)="game.startGame(game.gridSize);"
+      matRippleRadius="30"
+      matRippleCentered="true"></button>
+  </div>
+
 </div>

@@ -1,3 +1,4 @@
 export interface MyMouseEvent {
-  type: "mouseDown" | "mouseUp"
+  type: "mouseDown" | "mouseUp",
+
 }

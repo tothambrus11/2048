@@ -3,6 +3,7 @@ import {Gesture, MouseGestures} from "./MouseGestures";
 
 import {Observable, Subscriber} from "rxjs";
 import * as p5 from "p5";
+import {GameComponent} from "./game.component";
 
 export interface GameControlEvent {
   name: "push-left" | "push-right" | "push-down" | "push-up",
@@ -15,7 +16,7 @@ export class GameControls {
   public controlEvent$: Observable<GameControlEvent>;
   public observer: Subscriber<GameControlEvent>;
 
-  constructor(private p: p5, private mouseEvent$: Observable<MyMouseEvent>, private keyboardEvent$: Observable<KeyboardEvent>) {
+  constructor(private p: p5, private mouseEvent$: Observable<MyMouseEvent>, private keyboardEvent$: Observable<KeyboardEvent>, gameComponent: GameComponent) {
     this.mouseGestures = new MouseGestures(p, mouseEvent$);
 
     this.controlEvent$ = new Observable((observer: Subscriber<GameControlEvent>) => {
@@ -23,6 +24,9 @@ export class GameControls {
     });
 
     this.mouseGestures.data$.subscribe((gesture: Gesture) => {
+      if(gesture.from.y > gameComponent.height && gesture.from.x > 0 && gesture.from.x < gameComponent.width){
+        return;
+      }
       switch (gesture.name) {
         case "left":
           this.observer.next({name: "push-left"});

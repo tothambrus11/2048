@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="500" height="500" viewBox="0 0 500 500">
+  <defs>
+    <clipPath id="clip-new-game-icon">
+      <rect width="500" height="500"/>
+    </clipPath>
+  </defs>
+  <g id="new-game-icon" clip-path="url(#clip-new-game-icon)">
+    <rect id="Rectangle_5" data-name="Rectangle 5" width="400" height="100" transform="translate(50 200)" fill="#1a929e"/>
+    <rect id="Rectangle_5-2" data-name="Rectangle 5" width="400" height="100" transform="translate(300 50) rotate(90)" fill="#1a929e"/>
+  </g>
+</svg>

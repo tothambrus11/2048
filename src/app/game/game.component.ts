@@ -3,6 +3,7 @@ import * as P5 from "p5";
 import {Observable, Subscriber} from "rxjs";
 import {MyMouseEvent} from "./MyMouseEvent";
 import {GameControlEvent, GameControls} from "./GameControls";
+import {GameService} from "./game.service";
 
 @Component({
   selector: 'game',
@@ -31,11 +32,16 @@ export class GameComponent implements OnInit, OnChanges {
   previousMap: number[][];
   map: number[][];
 
+  tileSize = 0.8;
+
+  @Input()
+  saveState: boolean;
+
   @ViewChild("gameContainer", {static: false}) gameContainer;
 
   private gameControls: GameControls;
   isAnimating: boolean = false;
-  animationDuration: number = 600;
+  animationDuration: number = 300;
   animationStart: number;
   animations: Animation[];
 
@@ -45,40 +51,43 @@ export class GameComponent implements OnInit, OnChanges {
   keyboardObservable: Observable<KeyboardEvent>;
   keyboardObserver: Subscriber<KeyboardEvent>;
 
-  constructor(private elRef: ElementRef) {
+  score: number;
+  previousScore: number;
+  tileImage: P5.Image;
+
+  constructor(private elRef: ElementRef, public service: GameService) {
     this.keyboardObservable = new Observable<KeyboardEvent>((observer) => {
       this.keyboardObserver = observer;
     });
     this.mouseObservable = new Observable<MyMouseEvent>((observer) => {
       this.mouseObserver = observer;
     });
+    if (!this.service.bestScore) {
+      this.service.bestScore = 0;
+    }
   }
 
   ngOnInit() {
-    console.log(this.elRef.nativeElement);
     this.p = new P5((p: P5) => {
       p.setup = () => {
         p.createCanvas(this.width, this.height);
         let fontName = getComputedStyle(document.body).getPropertyValue("--base-font").split(",")[0];
-        fontName = fontName.substr(2, fontName.length - 3);
+        fontName.replace(/"/g, "");
 
         (document as any).fonts.ready.then(() => {
           p.textFont(fontName);
         });
 
-        this.gameControls = new GameControls(this.p, this.mouseObservable, this.keyboardObservable);
+        this.gameControls = new GameControls(this.p, this.mouseObservable, this.keyboardObservable, this);
 
-        this.startGame(this.gridSize);
-
-        if (1 != 1) {
-          setInterval(() => {
-            const moves = ["push-left", "push-right", "push-down", "push-up"];
-            this.gameControls.observer.next({
-                // @ts-ignore
-                name: moves[Math.floor(Math.random() * 4)]
-              }
-            )
-          }, 1);
+        if (this.service.hasStartedGame) {
+          const state = this.service.retrieveState();
+          this.map = state.map;
+          this.previousMap = state.previousMap;
+          this.score = state.score;
+          this.previousScore = state.score;
+        } else {
+          this.startGame(this.gridSize);
         }
 
         this.gameControls.controlEvent$.subscribe((value) => {
@@ -96,10 +105,17 @@ export class GameComponent implements OnInit, OnChanges {
               this.animationStart = p.millis();
               this.isAnimating = true;
 
+              this.service.saveState({
+                score: newWorld.score,
+                previousScore: this.score,
+                map: newWorld.map,
+                previousMap: this.map
+              })
 
             } else if (!this.canMove(this.map)) {
               this.isAnimating = false;
-              alert("GAMEOVER");
+              this.service.saveState(undefined);
+              alert("Game over!");
             }
             console.log(value);
           }
@@ -107,6 +123,10 @@ export class GameComponent implements OnInit, OnChanges {
       };
       p.draw = () => {
         this.drawState(p);
+      };
+
+      p.preload = () => {
+        this.tileImage = p.loadImage('assets/tile.jpg');
       };
 
       p.touchStarted = () => {
@@ -164,6 +184,12 @@ export class GameComponent implements OnInit, OnChanges {
     this.map = this.addRandomNumber(this.map);
     this.map = this.addRandomNumber(this.map);
 
+    if (this.saveState) {
+      this.service.saveState({
+        map: this.map,
+        score: 0
+      });
+    }
   }
 
   getFreeTiles(map: number[][]): Position[] {
@@ -197,8 +223,8 @@ export class GameComponent implements OnInit, OnChanges {
     return freeTiles[index];
   }
 
-  move(map: number[][], event: GameControlEvent, calculateAnimations: boolean): { map: number[][], animations?: Animation[] } {
-    let world: { map: number[][], animations: Animation[] };
+  move(map: number[][], event: GameControlEvent, calculateAnimations: boolean): { map: number[][], animations?: Animation[], score: number } {
+    let world: { map: number[][], animations: Animation[], score: number };
 
     switch (event.name) {
       case "push-left":
@@ -230,7 +256,7 @@ export class GameComponent implements OnInit, OnChanges {
     }
   }
 
-  slideLeftMap(_map: number[][], dir: number, calculateAnimations: boolean): { map: number[][], animations: Animation[] } {
+  slideLeftMap(_map: number[][], dir: number, calculateAnimations: boolean): { map: number[][], animations: Animation[], score: number } {
     let map = JSON.parse(JSON.stringify(_map)); // Clone map;
 
     let twoDAnimations: Animation[] = [];
@@ -255,7 +281,7 @@ export class GameComponent implements OnInit, OnChanges {
       console.log(twoDAnimations);
     }
 
-    return {map, animations: twoDAnimations};
+    return {map, animations: twoDAnimations, score: 0};
   }
 
   rotateMatrix<T>(matrix: T[][], deltaDir): T[][] {
@@ -412,7 +438,6 @@ export class GameComponent implements OnInit, OnChanges {
 
         // Do actual stuff
         array2.push(array[i]);
-
       }
 
     }
@@ -438,28 +463,34 @@ export class GameComponent implements OnInit, OnChanges {
 
   }
 
-  drawTile(position: Position, value, action?: string) {
+  drawTile(position: Position, value, isMoving?: boolean) {
     let p = this.p;
 
     if (value !== 0) {
       p.noStroke();
-      p.colorMode(p.HSL);
+
       const log = Math.log2(value);
 
+      //p.image(this.tileImage, position.column * this.unit, position.row * this.unit, this.unit * this.tileSize, this.unit * this.tileSize);
+
+
+      p.colorMode(p.HSL);
       p.fill(165 + (log / this.maxNumberLog) * 90, 0.3 * 255, ((log / this.maxNumberLog)) * 50 + 20);
-      p.rect(position.column * this.unit, position.row * this.unit, this.unit * 0.8, this.unit * 0.8);
 
       p.colorMode(p.RGB);
+      //p.fill([...this.getTileColor(log), 140]);
+
+      p.rect(position.column * this.unit, position.row * this.unit, this.unit * this.tileSize, this.unit * this.tileSize);
 
       p.fill(this.backgroundColor);
       p.textSize(this.unit * 0.25);
 
       p.textAlign(p.CENTER, p.CENTER);
-      p.text(value, (position.column + 0.05) * this.unit, position.row * this.unit, this.unit * 0.8, this.unit * 0.8);
+      p.text(value, (position.column + 0.05) * this.unit, position.row * this.unit, this.unit * this.tileSize, this.unit * this.tileSize);
     } else {
       p.noStroke();
       p.fill([0, 0, 0, 20]);
-      p.rect(position.column * this.unit, position.row * this.unit, this.unit * 0.8, this.unit * 0.8);
+      p.rect(position.column * this.unit, position.row * this.unit, this.unit * this.tileSize, this.unit * this.tileSize);
     }
   }
 
@@ -467,7 +498,6 @@ export class GameComponent implements OnInit, OnChanges {
     p.background(this.backgroundColor);
 
     p.push();
-    p.translate(0.1 * this.unit, 0.1 * this.unit);
 
     if (this.isAnimating) {
       for (let i = 0; i < this.previousMap.length; i++) {
@@ -484,8 +514,7 @@ export class GameComponent implements OnInit, OnChanges {
           }
           if (!found) {
             this.drawTile({row: i, column: j}, this.previousMap[i][j]);
-          }
-          else{
+          } else {
             this.drawTile({row: i, column: j}, 0);
           }
         }
@@ -495,13 +524,13 @@ export class GameComponent implements OnInit, OnChanges {
 
       movingAnimations.forEach((anim: Animation) => {
         p.stroke(0, 0, 0, 30);
-        p.strokeWeight(50);
+        p.strokeWeight(this.unit * 0.3);
         p.line(this.unit * ((anim.from as Position).column + 0.4), this.unit * ((anim.from as Position).row + 0.4), this.unit * ((anim.to as Position).column + 0.4), this.unit * ((anim.to as Position).row + 0.4));
       });
 
       movingAnimations.forEach((anim: Animation) => {
         let animatedPos = this.easeAnimation(anim.from as Position, anim.to as Position, (p.millis() - this.animationStart) / this.animationDuration);
-        this.drawTile(animatedPos, anim.value);
+        this.drawTile(animatedPos, anim.value, true);
       });
 
       if (this.animationStart + this.animationDuration < p.millis()) {
@@ -521,7 +550,7 @@ export class GameComponent implements OnInit, OnChanges {
   }
 
   get unit(): number {
-    return this.p.width / this.gridSize;
+    return this.p.width / (this.gridSize - 1 + this.tileSize);
   }
 
   private canMove(map: number[][]): boolean {
@@ -544,6 +573,19 @@ export class GameComponent implements OnInit, OnChanges {
   get maxNumberLog() {
     return this.gridSize * this.gridSize + 1;
   }
+
+  private getTileColor(log: number) {
+    const colors = [
+      [50, 127, 168],
+      [69, 110, 133],
+      [96, 186, 196],
+      [123, 210, 219],
+      [255, 0, 0],
+      [200, 20, 80],
+    ];
+    if (colors[log]) return colors[log];
+    else return [255, 0, 0];
+  }
 }
 
 interface Animation {
@@ -562,4 +604,11 @@ interface RowAnimationState {
 interface Position {
   row: number,
   column: number
+}
+
+export interface State {
+  map: number[][],
+  previousMap?: number[][] | undefined,
+  score: number,
+  previousScore?: number | undefined
 }

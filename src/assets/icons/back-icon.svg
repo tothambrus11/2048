@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="500" height="500" viewBox="0 0 500 500">
+  <defs>
+    <clipPath id="clip-back-icon">
+      <rect width="500" height="500"/>
+    </clipPath>
+  </defs>
+  <g id="back-icon" clip-path="url(#clip-back-icon)">
+    <rect id="Rectangle_7" data-name="Rectangle 7" width="204" height="100" transform="translate(135.185 214.749) rotate(45)" fill="#1a929e"/>
+    <rect id="Rectangle_7-2" data-name="Rectangle 7" width="255" height="100" transform="translate(29.394 250.17) rotate(-45)" fill="#1a929e"/>
+    <g id="Group_4" data-name="Group 4">
+      <circle id="Ellipse_2" data-name="Ellipse 2" cx="50" cy="50" r="50" transform="translate(350 200)" fill="#1a929e"/>
+    </g>
+    <rect id="Rectangle_5" data-name="Rectangle 5" width="350" height="100" transform="translate(100 200)" fill="#1a929e"/>
+    <circle id="Ellipse_4" data-name="Ellipse 4" cx="50" cy="50" r="50" transform="translate(206.17 285.185) rotate(45)" fill="#1a929e"/>
+  </g>
+</svg>

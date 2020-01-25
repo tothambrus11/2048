@@ -3,7 +3,9 @@ import {Observable, Subscriber} from "rxjs";
 import {MyMouseEvent} from "./MyMouseEvent";
 
 export interface Gesture {
-  name: "left" | "right" | "down" | "up"
+  name: "left" | "right" | "down" | "up",
+  from: p5.Vector,
+  to: p5.Vector
 }
 
 export class MouseGestures {
@@ -35,13 +37,13 @@ export class MouseGestures {
 
           if (diff.mag() > 20) {
             if (diff.x >= Math.abs(diff.y)) {
-              this.observer.next({name: "right"});
+              this.observer.next({name: "right", from: this.firstPos, to: this.secondPos});
             } else if (-diff.x >= Math.abs(diff.y)) {
-              this.observer.next({name: "left"});
+              this.observer.next({name: "left", from: this.firstPos, to: this.secondPos});
             } else if (diff.y >= Math.abs(diff.x)) {
-              this.observer.next({name: "down"});
+              this.observer.next({name: "down", from: this.firstPos, to: this.secondPos});
             } else if (-diff.y >= Math.abs(diff.x)) {
-              this.observer.next({name: "up"});
+              this.observer.next({name: "up", from: this.firstPos, to: this.secondPos});
             }
           }
           break;
