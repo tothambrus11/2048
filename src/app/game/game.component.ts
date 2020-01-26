@@ -180,7 +180,7 @@ export class GameComponent implements OnInit, OnChanges {
   startGame(size: number) {
     if (!this.isAnimating) {
       this.isAnimating = false;
-      this.previousMap = null;
+      this.previousMap = undefined;
 
       this.map = [];
       for (let i = 0; i < size; i++) {
@@ -195,14 +195,12 @@ export class GameComponent implements OnInit, OnChanges {
 
       this.score = 0;
       this.previousScore = undefined;
-      this.previousMap = [];
 
-      if (this.saveState) {
-        this.service.saveState({
-          map: this.map,
-          score: 0
-        });
-      }
+      this.service.saveState({
+        map: this.map,
+        score: 0
+      });
+
     }
   }
 
