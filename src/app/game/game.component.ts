@@ -35,7 +35,7 @@ export class GameComponent implements OnInit, OnChanges {
   tileSize = 0.8;
 
   @Input()
-  saveState: boolean;
+  saveState: boolean = true;
 
   @ViewChild("gameContainer", {static: false}) gameContainer;
 
@@ -92,11 +92,13 @@ export class GameComponent implements OnInit, OnChanges {
 
         this.gameControls.controlEvent$.subscribe((value) => {
           if (!this.isAnimating) {
-            this.previousMap = JSON.parse(JSON.stringify(this.map));
 
             let newWorld = this.move(this.map, value, true);
 
             if (this.mapChanged(newWorld.map, this.map)) {
+              this.previousMap = JSON.parse(JSON.stringify(this.map));
+              this.previousScore = this.score;
+
               let randomTile = this.getRandomTileToAdd(newWorld.map);
               newWorld.map[randomTile.pos.row][randomTile.pos.column] = randomTile.value;
               newWorld.animations.push({pos: randomTile.pos, type: "appear", value: randomTile.value});
@@ -105,12 +107,18 @@ export class GameComponent implements OnInit, OnChanges {
               this.animationStart = p.millis();
               this.isAnimating = true;
 
+              this.score += newWorld.score;
+
               this.service.saveState({
-                score: newWorld.score,
+                score: this.score,
                 previousScore: this.score,
                 map: newWorld.map,
                 previousMap: this.map
-              })
+              });
+
+              if (this.score > this.service.bestScore) {
+                this.service.bestScore = this.score;
+              }
 
             } else if (!this.canMove(this.map)) {
               this.isAnimating = false;
@@ -170,25 +178,31 @@ export class GameComponent implements OnInit, OnChanges {
   }
 
   startGame(size: number) {
-    this.isAnimating = false;
-    this.previousMap = null;
+    if (!this.isAnimating) {
+      this.isAnimating = false;
+      this.previousMap = null;
 
-    this.map = [];
-    for (let i = 0; i < size; i++) {
-      this.map.push([]);
-      for (let j = 0; j < size; j++) {
-        this.map[i].push(0);
+      this.map = [];
+      for (let i = 0; i < size; i++) {
+        this.map.push([]);
+        for (let j = 0; j < size; j++) {
+          this.map[i].push(0);
+        }
       }
-    }
 
-    this.map = this.addRandomNumber(this.map);
-    this.map = this.addRandomNumber(this.map);
+      this.map = this.addRandomNumber(this.map);
+      this.map = this.addRandomNumber(this.map);
 
-    if (this.saveState) {
-      this.service.saveState({
-        map: this.map,
-        score: 0
-      });
+      this.score = 0;
+      this.previousScore = undefined;
+      this.previousMap = [];
+
+      if (this.saveState) {
+        this.service.saveState({
+          map: this.map,
+          score: 0
+        });
+      }
     }
   }
 
@@ -221,6 +235,23 @@ export class GameComponent implements OnInit, OnChanges {
     let freeTiles = this.getFreeTiles(map);
     let index = Math.floor(Math.random() * freeTiles.length);
     return freeTiles[index];
+  }
+
+  back() {
+    if (this.previousMap && !this.isAnimating) {
+      this.map = this.previousMap;
+      this.previousMap = undefined;
+
+      this.score = this.previousScore;
+      this.previousScore = undefined;
+
+      this.service.saveState({
+        map: this.map,
+        score: this.score,
+        previousMap: undefined,
+        previousScore: undefined
+      })
+    }
   }
 
   move(map: number[][], event: GameControlEvent, calculateAnimations: boolean): { map: number[][], animations?: Animation[], score: number } {
@@ -260,10 +291,12 @@ export class GameComponent implements OnInit, OnChanges {
     let map = JSON.parse(JSON.stringify(_map)); // Clone map;
 
     let twoDAnimations: Animation[] = [];
+    let score = 0;
     for (let rowNum = 0; rowNum < map.length; rowNum++) {
       let rowAnimationState = this.slideRow(map[rowNum]);
       map[rowNum] = rowAnimationState.row;
 
+      score += rowAnimationState.score;
       if (calculateAnimations) {
         let animations: Animation[] = rowAnimationState.animations;
         // Convert to the actual 2D position
@@ -281,7 +314,7 @@ export class GameComponent implements OnInit, OnChanges {
       console.log(twoDAnimations);
     }
 
-    return {map, animations: twoDAnimations, score: 0};
+    return {map, animations: twoDAnimations, score};
   }
 
   rotateMatrix<T>(matrix: T[][], deltaDir): T[][] {
@@ -339,7 +372,7 @@ export class GameComponent implements OnInit, OnChanges {
     }
 
     while (slidedRow.length < row.length) slidedRow.push(0);
-    return {row: slidedRow, animations};
+    return {row: slidedRow, animations, score: 0};
   }
 
   slideRow(row: number[]): RowAnimationState {
@@ -350,7 +383,7 @@ export class GameComponent implements OnInit, OnChanges {
     console.log(afterCombine.animations);
     let animations: Animation[] = this.combineAnimations(afterSlide.animations, afterCombine.animations);
 
-    return {animations: animations, row: afterCombine.row}
+    return {animations: animations, row: afterCombine.row, score: afterCombine.score}
   }
 
   combineAnimations(animations1: Animation[], animations2: Animation[]): Animation[] {
@@ -408,6 +441,8 @@ export class GameComponent implements OnInit, OnChanges {
     let array = [..._array]; // Tömb klónozása
     let array2 = [];
 
+    let score = 0;
+
     for (let i = 0; i < array.length; i++) {
       if (array[i] === 0) continue;
 
@@ -418,6 +453,9 @@ export class GameComponent implements OnInit, OnChanges {
           let anim2: Animation = {from: i + 1, to: array2.length, type: "move", value: array[i + 1]};
           animations.push(anim1);
           animations.push(anim2);
+
+          // Increase score
+          score += anim1.value * 2;
 
           // Do actual stuff
           array2.push(array[i] * 2);
@@ -444,7 +482,7 @@ export class GameComponent implements OnInit, OnChanges {
     while (array2.length < _array.length) array2.push(0);
 
     animations.filter(a => a.from !== a.to);
-    return {row: array2, animations};
+    return {row: array2, animations, score};
   }
 
   getActualPosition(rowNum: number, _dir: number, colNum: number): Position {
@@ -534,7 +572,6 @@ export class GameComponent implements OnInit, OnChanges {
       });
 
       if (this.animationStart + this.animationDuration < p.millis()) {
-        console.log("ANIMSTART: " + this.animationStart + " MILLIS: " + p.millis());
         this.isAnimating = false;
         this.animations = [];
       }
@@ -598,7 +635,8 @@ interface Animation {
 
 interface RowAnimationState {
   animations: Animation[]
-  row: number[]
+  row: number[],
+  score: number
 }
 
 interface Position {

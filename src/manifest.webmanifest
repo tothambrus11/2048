@@ -1,8 +1,8 @@
 {
   "name": "2048",
   "short_name": "2048",
-  "theme_color": "#246188",
-  "background_color": "#246188",
+  "theme_color": "#0f7682",
+  "background_color": "#0f7682",
   "display": "standalone",
   "scope": "/",
   "start_url": "/",
